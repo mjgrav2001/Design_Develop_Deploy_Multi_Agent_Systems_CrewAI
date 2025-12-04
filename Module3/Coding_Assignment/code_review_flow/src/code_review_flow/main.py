@@ -69,7 +69,7 @@ class PRCodeReviewFlow(Flow[ReviewState]):
             # append some error message to the errors state variable
             self.state.errors.append("Error while reading the PR file")
             # save the error message in the final answer state variable
-            self.state.errors = error_message
+            self.state.final_answer = error_message
             ### END CODE HERE ###
 
     ### START CODE HERE ###
@@ -127,6 +127,10 @@ class PRCodeReviewFlow(Flow[ReviewState]):
             "Analyze this pull request diff file and evaluate the changes.\n"
             "Do not make assumptions or considerations about the code outside of the diff provided, but if warranted you can make suggestions.\n"
             f"\nPR Diff:\n{self.state.pr_content}\n"
+            "The feedback should be included the response in JSON format with the follwowing keys:\n"
+            "'confidence': Your confidence score of the code changes as an integer between 0 and 100,\n"
+            "'findings': A summary of the key findings from both analyses as a string,\n"
+            "'recommendations': Any additional recommendations or observations as a string.\n"          
         )
         ### END CODE HERE ###
 
@@ -142,6 +146,7 @@ class PRCodeReviewFlow(Flow[ReviewState]):
 
     # if the PR is complex, deploy crew review
     ### START CODE HERE ###
+    @persist()
     @listen("COMPLEX")
     ### END CODE HERE ###
     def full_crew_review(self):
@@ -160,7 +165,7 @@ class PRCodeReviewFlow(Flow[ReviewState]):
             result = code_review_crew.kickoff(inputs = {'file_content': pr_content})
 
             # save the results in the state variable. You can use the `json_dict` attribute of the result
-            self.state.review_result = result
+            self.state.review_result = result.json_dict
 
             # save the tokens used by the crew. You can use the `token_usage` attribute of the result
             self.state.tokens_used = result.token_usage
@@ -172,7 +177,7 @@ class PRCodeReviewFlow(Flow[ReviewState]):
             # append some error message to the errors state variable
             self.state.errors.append("Error during crew review")
             # save the error message in the final answer state variable
-            self.state.errors = error_message
+            self.state.final_answer = error_message
             ### END CODE HERE ###
 
     # make the final decision based on the review results
